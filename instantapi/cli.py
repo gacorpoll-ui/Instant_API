@@ -352,7 +352,6 @@ async def _delete_async(api_id: int, yes: bool):
         console.print(f"[red]API #{api_id} not found.[/red]")
 
 
-@app.command()
 def config_cmd(
     provider: Optional[str] = typer.Option(None, "--provider", help="Set LLM provider"),
     model: Optional[str] = typer.Option(None, "--model", help="Set model name"),

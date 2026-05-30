@@ -8,6 +8,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
+import html as html_module
+
 from instantapi.storage.db import delete_api, get_api, list_apis
 
 dashboard_app = FastAPI(
@@ -30,18 +32,24 @@ async def dashboard_home() -> str:
     apis = await list_apis()
     rows = ""
     for api in apis:
+        safe_url = html_module.escape(api['url'][:60])
+        safe_url_attr = html_module.escape(api['url'])
+        safe_desc = html_module.escape(api.get('site_description', '')[:50])
+        safe_date = html_module.escape(api['created_at'][:19].replace('T', ' '))
+        api_id = int(api['id'])
         rows += f"""
         <tr>
-            <td class="px-4 py-2 text-sm font-mono text-cyan-400">{api['id']}</td>
-            <td class="px-4 py-2 text-sm truncate max-w-xs" title="{api['url']}">{api['url'][:60]}</td>
-            <td class="px-4 py-2 text-sm text-gray-300">{api.get('site_description', '')[:50]}</td>
-            <td class="px-4 py-2 text-sm text-gray-400">{api['created_at'][:19].replace('T',' ')}</td>
+            <td class="px-4 py-2 text-sm font-mono text-cyan-400">{api_id}</td>
+            <td class="px-4 py-2 text-sm truncate max-w-xs" title="{safe_url_attr}">{safe_url}</td>
+            <td class="px-4 py-2 text-sm text-gray-300">{safe_desc}</td>
+            <td class="px-4 py-2 text-sm text-gray-400">{safe_date}</td>
             <td class="px-4 py-2 text-sm space-x-2">
-                <a href="/api/{api['id']}" target="_blank"
-                   class="text-cyan-400 hover:text-cyan-300 underline">Serve</a>
-                <a href="/delete/{api['id']}"
-                   class="text-red-400 hover:text-red-300 underline"
-                   onclick="return confirm('Delete API #{api['id']}?')">Delete</a>
+                <a href="/api/{api_id}" target="_blank"
+                   class="text-cyan-400 hover:text-cyan-300 underline">Detail</a>
+                <form method="POST" action="/delete/{api_id}" style="display:inline"
+                      onsubmit="return confirm('Delete API #{api_id}?')">
+                    <button type="submit" class="text-red-400 hover:text-red-300 underline bg-transparent border-0 cursor-pointer p-0">Delete</button>
+                </form>
             </td>
         </tr>
         """
@@ -104,7 +112,7 @@ async def dashboard_home() -> str:
 
         <!-- Footer -->
         <div class="mt-8 text-center text-gray-600 text-xs">
-            <a href="https://github.com/riri/instantapi" class="hover:text-gray-400">InstantAPI on GitHub</a>
+            <a href="https://github.com/gacorpoll-ui/Instant_API" class="hover:text-gray-400">InstantAPI on GitHub</a>
         </div>
     </div>
 </body>
@@ -118,12 +126,17 @@ async def dashboard_api_detail(api_id: int) -> str:
     if not result:
         return "<h1>Not Found</h1><p>API not found.</p>"
 
-    endpoints_html = ""
+        safe_url = html_module.escape(result.source_url)
+        safe_desc = html_module.escape(result.site_description or result.source_url)
+        endpoints_html = ""
     for ep in result.endpoints:
+        safe_ep_method = html_module.escape(ep.method)
+        safe_ep_name = html_module.escape(ep.name)
+        safe_ep_desc = html_module.escape(ep.description[:80])
         fields_html = "".join(
-            f'<tr><td class="py-1 pr-4 text-cyan-400 font-mono text-xs">{name}</td>'
-            f'<td class="py-1 pr-4 text-yellow-400 text-xs">{field.type}</td>'
-            f'<td class="py-1 text-gray-400 text-xs">{field.description}</td></tr>'
+            f'<tr><td class="py-1 pr-4 text-cyan-400 font-mono text-xs">{html_module.escape(name)}</td>'
+            f'<td class="py-1 pr-4 text-yellow-400 text-xs">{html_module.escape(field.type)}</td>'
+            f'<td class="py-1 text-gray-400 text-xs">{html_module.escape(field.description)}</td></tr>'
             for name, field in ep.schema_fields.items()
         )
         sample_preview = ""
@@ -137,9 +150,9 @@ async def dashboard_api_detail(api_id: int) -> str:
         endpoints_html += f"""
         <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
             <div class="flex items-center gap-3 mb-3">
-                <span class="bg-green-900 text-green-400 text-xs font-bold px-2 py-0.5 rounded">{ep.method}</span>
-                <code class="text-cyan-400 font-mono">/api/{ep.name}</code>
-                <span class="text-gray-400 text-sm ml-2">{ep.description[:80]}</span>
+                <span class="bg-green-900 text-green-400 text-xs font-bold px-2 py-0.5 rounded">{safe_ep_method}</span>
+                <code class="text-cyan-400 font-mono">/api/{safe_ep_name}</code>
+                <span class="text-gray-400 text-sm ml-2">{safe_ep_desc}</span>
                 <span class="ml-auto text-xs text-gray-500">{ep.item_count} items</span>
             </div>
             <table class="w-full">
@@ -170,8 +183,8 @@ async def dashboard_api_detail(api_id: int) -> str:
             <span class="text-white font-semibold">API #{api_id}</span>
         </div>
         <div class="mb-6">
-            <h1 class="text-xl font-bold text-white mb-1">{result.site_description or result.source_url}</h1>
-            <p class="text-gray-400 text-sm">{result.source_url}</p>
+            <h1 class="text-xl font-bold text-white mb-1">{safe_desc}</h1>
+            <p class="text-gray-400 text-sm">{safe_url}</p>
         </div>
         <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Endpoints</h2>
         {endpoints_html}
@@ -180,7 +193,7 @@ async def dashboard_api_detail(api_id: int) -> str:
 </html>"""
 
 
-@dashboard_app.get("/delete/{api_id}")
+@dashboard_app.post("/delete/{api_id}")
 async def dashboard_delete_api(api_id: int):
     """Delete an API and redirect to dashboard."""
     from fastapi.responses import RedirectResponse
