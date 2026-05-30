@@ -66,12 +66,12 @@ async def save_api(result: DetectionResult) -> int:
 
 
 async def list_apis() -> list[dict[str, Any]]:
-    """List all saved APIs."""
+    """List all active (non-deleted) saved APIs."""
     await init_db()
     async with aiosqlite.connect(DB_FILE) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
-            "SELECT id, url, site_description, created_at, is_active FROM apis ORDER BY id DESC"
+            "SELECT id, url, site_description, created_at, is_active FROM apis WHERE is_active = 1 ORDER BY id DESC"
         ) as cursor:
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
@@ -83,7 +83,7 @@ async def get_api(api_id: int) -> DetectionResult | None:
     async with aiosqlite.connect(DB_FILE) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
-            "SELECT * FROM apis WHERE id = ?", (api_id,)
+            "SELECT * FROM apis WHERE id = ? AND is_active = 1", (api_id,)
         ) as cursor:
             row = await cursor.fetchone()
             if not row:
@@ -116,9 +116,12 @@ async def get_api(api_id: int) -> DetectionResult | None:
 
 
 async def delete_api(api_id: int) -> bool:
-    """Delete a saved API."""
+    """Soft-delete a saved API (sets is_active = 0)."""
     await init_db()
     async with aiosqlite.connect(DB_FILE) as db:
-        cursor = await db.execute("DELETE FROM apis WHERE id = ?", (api_id,))
+        cursor = await db.execute(
+            "UPDATE apis SET is_active = 0, updated_at = ? WHERE id = ? AND is_active = 1",
+            (datetime.now(timezone.utc).isoformat(), api_id),
+        )
         await db.commit()
         return (cursor.rowcount or 0) > 0

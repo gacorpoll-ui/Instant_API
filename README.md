@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/instantapi.svg?color=cyan)](https://pypi.org/project/instantapi/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Stars](https://img.shields.io/github/stars/riri/instantapi?style=social)](https://github.com/riri/instantapi)
+[![Stars](https://img.shields.io/github/stars/riri/instantapi?style=social)](https://github.com/gacorpoll-ui/Instant_API)
 
 ```
 $ instantapi scrape https://news.ycombinator.com
@@ -215,7 +215,7 @@ The exported project includes:
 pip install instantapi
 
 # Or install from source
-git clone https://github.com/riri/instantapi
+git clone https://github.com/gacorpoll-ui/Instant_API
 cd instantapi
 pip install -e ".[dev]"
 
@@ -250,7 +250,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 <div align="center">
   Made with ❤️ by <a href="https://github.com/riri">Riri</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/riri/instantapi/issues">Report Bug</a>
+  <a href="https://github.com/gacorpoll-ui/Instant_API/issues">Report Bug</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/riri/instantapi/issues">Request Feature</a>
+  <a href="https://github.com/gacorpoll-ui/Instant_API/issues">Request Feature</a>
 </div>

@@ -101,6 +101,9 @@ async def ask_llm(
     )
 
 
+_JSON_MODE_PROVIDERS = {LLMProvider.OPENAI, LLMProvider.ANTHROPIC}
+
+
 async def ask_llm_json(
     prompt: str,
     config: Config,
@@ -110,13 +113,15 @@ async def ask_llm_json(
     """Send a prompt and parse the response as JSON.
 
     Falls back to extracting JSON from markdown code blocks if needed.
+    Only enables JSON mode (response_format) for providers that support it.
     """
+    use_json_mode = config.provider in _JSON_MODE_PROVIDERS
     response = await ask_llm(
         prompt=prompt,
         config=config,
         system=system,
         temperature=temperature,
-        response_format={"type": "json_object"},
+        response_format={"type": "json_object"} if use_json_mode else None,
     )
 
     text = response.content.strip()
