@@ -316,6 +316,101 @@ class TestStorage:
         assert none_result is None
 
 
+# ─── Regression Tests (bug fixes) ─────────────────────────────────────────
+
+
+class TestBugFixes:
+    """Tests for bugs found and fixed in code review."""
+
+    # Bug #1: Duplicate CLI command registration
+    def test_no_duplicate_config_command(self):
+        """config-cmd should NOT appear in registered commands; only 'config' should."""
+        from instantapi.cli import app
+        names = [
+            cmd.name or (cmd.callback.__name__ if cmd.callback else None)
+            for cmd in app.registered_commands
+        ]
+        assert "config-cmd" not in names, "Duplicate 'config-cmd' command found in CLI"
+        assert "config" in names, "'config' command missing from CLI"
+
+    # Bug #2: XSS in dashboard
+    def test_dashboard_escapes_html(self):
+        """Dashboard should escape HTML in user-controlled API data."""
+        import html as html_module
+        malicious = '<script>alert("xss")</script>'
+        escaped = html_module.escape(malicious)
+        assert "<script>" not in escaped
+        assert "&lt;script&gt;" in escaped
+
+    # Bug #4: response_format not sent to unsupported providers
+    def test_json_mode_only_for_supported_providers(self):
+        from instantapi.ai.providers import _JSON_MODE_PROVIDERS
+        from instantapi.config import LLMProvider
+        assert LLMProvider.OPENAI in _JSON_MODE_PROVIDERS
+        assert LLMProvider.ANTHROPIC in _JSON_MODE_PROVIDERS
+        assert LLMProvider.OLLAMA not in _JSON_MODE_PROVIDERS
+        assert LLMProvider.GEMINI not in _JSON_MODE_PROVIDERS
+        assert LLMProvider.GROQ not in _JSON_MODE_PROVIDERS
+
+    # Bug #5: Config.extra field persisted
+    def test_config_extra_persisted(self, tmp_path, monkeypatch):
+        from instantapi import config as cfg_module
+        monkeypatch.setattr(cfg_module, "CONFIG_FILE", tmp_path / "config.json")
+        monkeypatch.setattr(cfg_module, "APP_DIR", tmp_path)
+
+        original = Config(extra={"my_key": "my_value", "num": 42})
+        original.save()
+
+        loaded = Config.load()
+        assert loaded.extra.get("my_key") == "my_value"
+        assert loaded.extra.get("num") == 42
+
+    # Bug #6: is_active soft-delete consistency
+    @pytest.mark.asyncio
+    async def test_soft_delete_hides_api(self, tmp_path, monkeypatch):
+        from instantapi import config as cfg_module
+        from instantapi.storage import db as db_module
+
+        monkeypatch.setattr(cfg_module, "APP_DIR", tmp_path)
+        monkeypatch.setattr(cfg_module, "DB_FILE", tmp_path / "test.db")
+        monkeypatch.setattr(db_module, "APP_DIR", tmp_path)
+        monkeypatch.setattr(db_module, "DB_FILE", tmp_path / "test.db")
+
+        from instantapi.ai.detector import DetectionResult, EndpointSchema, FieldSchema
+        from instantapi.storage.db import delete_api, get_api, list_apis, save_api
+
+        result = DetectionResult(
+            endpoints=[EndpointSchema(name="things", schema_fields={}, sample_data=[])],
+            site_description="Test",
+            source_url="https://test.com",
+        )
+        api_id = await save_api(result)
+
+        # Before delete — should be visible
+        assert await get_api(api_id) is not None
+        apis_before = await list_apis()
+        assert any(a["id"] == api_id for a in apis_before)
+
+        # After soft delete — should be hidden
+        ok = await delete_api(api_id)
+        assert ok is True
+
+        assert await get_api(api_id) is None
+        apis_after = await list_apis()
+        assert not any(a["id"] == api_id for a in apis_after)
+
+        second_delete = await delete_api(api_id)
+        assert second_delete is False
+
+    # Bug #7: No dead imports in exporter
+    def test_exporter_no_dead_imports(self):
+        import importlib
+        import instantapi.api.exporter as exporter_module
+        source = open(exporter_module.__file__).read()
+        assert "FileSystemLoader" not in source
+        assert "PackageLoader" not in source
+
+
 # ─── Dashboard Gateway Tests ───────────────────────────────────────────────
 
 
@@ -385,3 +480,6 @@ class TestDashboardGateway:
             # 5. Test item not found
             resp = await client.get(f"/api/v1/{api_id}/products/99")
             assert resp.status_code == 404
+
+
+

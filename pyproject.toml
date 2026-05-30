@@ -48,10 +48,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/riri/instantapi"
-Documentation = "https://instantapi.dev"
-Repository = "https://github.com/riri/instantapi"
-Issues = "https://github.com/riri/instantapi/issues"
+Homepage = "https://github.com/gacorpoll-ui/Instant_API"
+Documentation = "https://github.com/gacorpoll-ui/Instant_API#readme"
+Repository = "https://github.com/gacorpoll-ui/Instant_API"
+Issues = "https://github.com/gacorpoll-ui/Instant_API/issues"
 
 [project.scripts]
 instantapi = "instantapi.cli:app"
