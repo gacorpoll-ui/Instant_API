@@ -12,6 +12,58 @@ from fastapi.responses import JSONResponse
 from instantapi.ai.detector import DetectionResult, EndpointSchema
 
 
+def process_items(
+    items: list[dict[str, Any]],
+    q: str = "",
+    sort: str = "",
+    order: str = "asc",
+    page: int = 1,
+    limit: int = 20,
+    fields: list[str] | None = None,
+) -> dict[str, Any]:
+    """Search, sort, and paginate items dynamically."""
+    import math
+
+    processed = items.copy()
+
+    # Full-text search
+    if q:
+        q_lower = q.lower()
+        processed = [
+            item
+            for item in processed
+            if any(q_lower in str(v).lower() for v in item.values())
+        ]
+
+    # Sorting
+    if sort and (fields is None or sort in fields):
+        reverse = order.lower() == "desc"
+        processed = sorted(
+            processed,
+            key=lambda x: str(x.get(sort, "")),
+            reverse=reverse,
+        )
+
+    # Pagination
+    total = len(processed)
+    total_pages = max(1, math.ceil(total / limit))
+    start = (page - 1) * limit
+    end = start + limit
+    page_items = processed[start:end]
+
+    return {
+        "data": page_items,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        },
+    }
+
+
 def create_api(result: DetectionResult) -> FastAPI:
     """Dynamically generate a FastAPI app from detected schemas.
 
@@ -94,48 +146,12 @@ def _register_endpoint(app: FastAPI, endpoint: EndpointSchema) -> None:
         sort: str = Query("", description=f"Sort by field. Available: {', '.join(fields)}"),
         order: str = Query("asc", description="Sort order: asc or desc"),
     ) -> dict[str, Any]:
-        items = data.copy()
-
-        # Full-text search
-        if q:
-            q_lower = q.lower()
-            items = [
-                item
-                for item in items
-                if any(q_lower in str(v).lower() for v in item.values())
-            ]
-
-        # Sorting
-        if sort and sort in fields:
-            reverse = order.lower() == "desc"
-            items = sorted(
-                items,
-                key=lambda x: str(x.get(sort, "")),
-                reverse=reverse,
-            )
-
-        # Pagination
-        total = len(items)
-        total_pages = max(1, math.ceil(total / limit))
-        start = (page - 1) * limit
-        end = start + limit
-        page_items = items[start:end]
-
-        return {
-            "data": page_items,
-            "pagination": {
-                "page": page,
-                "limit": limit,
-                "total": total,
-                "total_pages": total_pages,
-                "has_next": page < total_pages,
-                "has_prev": page > 1,
-            },
-            "meta": {
-                "endpoint": f"/api/{name}",
-                "fields": fields,
-            },
+        res = process_items(data, q, sort, order, page, limit, fields)
+        res["meta"] = {
+            "endpoint": f"/api/{name}",
+            "fields": fields,
         }
+        return res
 
     # GET /api/{name}/search - Advanced search
     @app.get(

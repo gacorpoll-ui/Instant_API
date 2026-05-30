@@ -314,3 +314,74 @@ class TestStorage:
 
         none_result = await get_api(api_id)
         assert none_result is None
+
+
+# ─── Dashboard Gateway Tests ───────────────────────────────────────────────
+
+
+class TestDashboardGateway:
+    @pytest.mark.asyncio
+    async def test_gateway_endpoints(self, tmp_path, monkeypatch):
+        from instantapi import config as cfg_module
+        from instantapi.storage import db as db_module
+        from instantapi.dashboard.app import dashboard_app
+        from httpx import AsyncClient, ASGITransport
+
+        monkeypatch.setattr(cfg_module, "APP_DIR", tmp_path)
+        monkeypatch.setattr(cfg_module, "DB_FILE", tmp_path / "test.db")
+        monkeypatch.setattr(db_module, "APP_DIR", tmp_path)
+        monkeypatch.setattr(db_module, "DB_FILE", tmp_path / "test.db")
+
+        from instantapi.storage.db import save_api
+
+        result = DetectionResult(
+            endpoints=[
+                EndpointSchema(
+                    name="products",
+                    description="Product listings",
+                    schema_fields={
+                        "name": FieldSchema(type="string", description="Name"),
+                        "price": FieldSchema(type="number", description="Price"),
+                    },
+                    sample_data=[
+                        {"name": "Laptop", "price": 999.99},
+                        {"name": "Phone", "price": 499.99},
+                    ],
+                )
+            ],
+            site_description="Test Gateway",
+            source_url="https://gateway-test.com",
+        )
+
+        api_id = await save_api(result)
+
+        async with AsyncClient(transport=ASGITransport(app=dashboard_app), base_url="http://test") as client:
+            # 1. Test listing
+            resp = await client.get(f"/api/v1/{api_id}/products?limit=1")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert len(data["data"]) == 1
+            assert data["data"][0]["name"] == "Laptop"
+            assert data["pagination"]["total"] == 2
+
+            # 2. Test search
+            resp = await client.get(f"/api/v1/{api_id}/products/search?q=phone")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert len(data["data"]) == 1
+            assert data["data"][0]["name"] == "Phone"
+
+            # 3. Test schema
+            resp = await client.get(f"/api/v1/{api_id}/products/schema")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert "name" in data["fields"]
+
+            # 4. Test single item
+            resp = await client.get(f"/api/v1/{api_id}/products/0")
+            assert resp.status_code == 200
+            assert resp.json()["data"]["name"] == "Laptop"
+
+            # 5. Test item not found
+            resp = await client.get(f"/api/v1/{api_id}/products/99")
+            assert resp.status_code == 404
