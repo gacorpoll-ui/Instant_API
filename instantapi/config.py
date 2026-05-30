@@ -94,6 +94,7 @@ class Config:
             "max_pages": self.max_pages,
             "timeout": self.timeout,
             "cache_ttl": self.cache_ttl,
+            "extra": self.extra,
         }
         CONFIG_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
@@ -119,6 +120,7 @@ class Config:
                 max_pages=data.get("max_pages", 10),
                 timeout=data.get("timeout", 30),
                 cache_ttl=data.get("cache_ttl", 3600),
+                extra=data.get("extra", {}),
             )
         except (json.JSONDecodeError, ValueError):
             return cls()
