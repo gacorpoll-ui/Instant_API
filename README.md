@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/instantapi.svg?color=cyan)](https://pypi.org/project/instantapi/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Stars](https://img.shields.io/github/stars/riri/instantapi?style=social)](https://github.com/gacorpoll-ui/Instant_API)
+[![Stars](https://img.shields.io/github/stars/gacorpoll-ui/Instant_API?style=social)](https://github.com/gacorpoll-ui/Instant_API)
 
 ```
 $ instantapi scrape https://news.ycombinator.com
@@ -248,7 +248,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 <div align="center">
-  Made with ❤️ by <a href="https://github.com/riri">Riri</a>
+  Made with ❤️ by <a href="https://github.com/gacorpoll-ui">gacorpoll-ui</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/gacorpoll-ui/Instant_API/issues">Report Bug</a>
   &nbsp;·&nbsp;
